@@ -57,41 +57,7 @@
   .nav button:hover{color:var(--ink-2)}
   .nav button[aria-selected="true"]{color:var(--ink); border-bottom-color:var(--agent); font-weight:500}
 
-  /* ---------- turn card ---------- */
   main{max-width:1180px; margin:0 auto; padding:22px 24px 90px}
-  .thread{display:flex; flex-direction:column; gap:11px; max-width:840px}
-  .turn{background:var(--surface); border:1px solid var(--rule); border-radius:7px; overflow:hidden}
-  .turn.agent{border-left:3px solid var(--agent)}
-  .turn.user{border-left:3px solid var(--user)}
-  .turn.task{border-left:3px solid var(--rule-2)}
-
-  .head{width:100%; display:flex; align-items:center; gap:12px; padding:12px 15px; text-align:left}
-  .head:hover{background:var(--surface-2)}
-  .who{font-family:"IBM Plex Mono",monospace; font-size:.72rem; letter-spacing:.06em;
-       text-transform:uppercase; white-space:nowrap; font-weight:500}
-  .turn.agent .who{color:var(--agent)} .turn.user .who{color:var(--user)} .turn.task .who{color:var(--ink-3)}
-  .gist{flex:1; min-width:0; font-size:.87rem; color:var(--ink-2); overflow:hidden;
-        text-overflow:ellipsis; white-space:nowrap}
-  .turn.open .gist{display:none}
-  .tally{font-family:"IBM Plex Mono",monospace; font-size:.71rem; color:var(--ink-3); white-space:nowrap}
-  .caret{color:var(--ink-3); font-size:.7rem; transition:transform .15s}
-  .turn.open .caret{transform:rotate(90deg)}
-  @media (prefers-reduced-motion:reduce){ .caret{transition:none} }
-
-  .panel{display:none; border-top:1px solid var(--rule)}
-  .turn.open .panel{display:block}
-
-  .toolbtn{width:100%; text-align:left; padding:8px 15px; font-family:"IBM Plex Mono",monospace;
-           font-size:.72rem; color:var(--ink-3); background:var(--sunken); border-bottom:1px solid var(--rule)}
-  .toolbtn:hover{color:var(--ink-2)}
-  .tools{background:var(--sunken); border-bottom:1px solid var(--rule); padding:4px 15px 11px;
-         max-height:320px; overflow-y:auto; display:none; flex-direction:column; gap:5px}
-  .tools.open{display:flex}
-  .tl{display:grid; grid-template-columns:88px 1fr; gap:10px; font-family:"IBM Plex Mono",monospace;
-      font-size:.73rem; line-height:1.5}
-  .tl .n{color:var(--ink-2)} .tl.hi .n{color:var(--agent); font-weight:500}
-  .tl .d{color:var(--ink-3); white-space:pre-wrap; word-break:break-word}
-
   .body{padding:16px 19px 19px; font-size:.95rem}
   .body>*:first-child{margin-top:0} .body>*:last-child{margin-bottom:0}
   .body h2{font-size:1rem; margin:17px 0 8px; font-weight:600}
@@ -109,6 +75,14 @@
   .insight .lab{font-family:"IBM Plex Mono",monospace; font-size:.66rem; text-transform:uppercase;
                 letter-spacing:.09em; color:var(--insight); display:block; margin-bottom:6px}
   .insight p:last-child{margin-bottom:0}
+  .tools{background:var(--sunken); border-bottom:1px solid var(--rule); padding:4px 15px 11px;
+         max-height:320px; overflow-y:auto; display:none; flex-direction:column; gap:5px}
+  .tools.open{display:flex}
+  .tl{display:grid; grid-template-columns:88px 1fr; gap:10px; font-family:"IBM Plex Mono",monospace;
+      font-size:.73rem; line-height:1.5}
+  .tl .n{color:var(--ink-2)} .tl.hi .n{color:var(--agent); font-weight:500}
+  .tl .d{color:var(--ink-3); white-space:pre-wrap; word-break:break-word}
+  .tally{font-family:"IBM Plex Mono",monospace; font-size:.71rem; color:var(--ink-3); white-space:nowrap}
 
   /* ---------- compare ---------- */
   .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(330px,1fr)); gap:14px; align-items:start}
@@ -193,9 +167,8 @@
   <div class="row1">
     <h1>Learner trajectories &mdash; 2048</h1>
     <div class="modes">
-      <button id="mThread" aria-pressed="true">thread</button>
-      <button id="mCompare" aria-pressed="false">compare</button>
-      <button id="mNew" aria-pressed="false">new</button>
+      <button id="mNew" aria-pressed="true">trajectory comparison</button>
+      <button id="mCompare" aria-pressed="false">raw trajectories</button>
     </div>
     <button class="elide" id="mElide" aria-pressed="true">hide shared lines</button>
   </div>
@@ -215,7 +188,7 @@ const SLOTS = [
   {i:3, label:'agent · reply'},
   {i:4, label:'user · reply 2'},
 ];
-let mode = 'thread', cond = 'baseline', slot = 1, hideShared = true;
+let mode = 'new', slot = 1, hideShared = true;
 
 const esc = s => s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 const inline = s => esc(s)
@@ -294,37 +267,6 @@ function tallyOf(t){
 const toolsHTML = t => t.tools.length ? `<div class="tools">${t.tools.map(x =>
     `<div class="tl${/Bash|Skill/.test(x.n)?' hi':''}"><span class="n">${esc(x.n)}</span><span class="d">${esc(x.d)}</span></div>`
   ).join('')}</div>` : '';
-
-function renderThread(){
-  document.getElementById('view').innerHTML = `<div class="thread">${
-    DATA[cond].turns.map((t,idx) => `
-      <article class="turn ${roleOf(t)}" data-i="${idx}">
-        <button class="head" aria-expanded="false">
-          <span class="who">${nameOf(t)}</span>
-          <span class="gist">${esc(gistOf(t))}</span>
-          <span class="tally">${esc(tallyOf(t))}</span>
-          <span class="caret">▶</span>
-        </button>
-        <div class="panel">
-          ${t.tools.length ? `<button class="toolbtn">show ${t.tools.length} tool calls</button>` : ''}
-          ${toolsHTML(t)}
-          <div class="body">${bodyHTML(t)}</div>
-        </div>
-      </article>`).join('')}</div>`;
-  wireFolds(document.getElementById('view'));
-  document.querySelectorAll('.turn').forEach(el => {
-    el.querySelector('.head').onclick = () => {
-      const open = el.classList.toggle('open');
-      el.querySelector('.head').setAttribute('aria-expanded', String(open));
-    };
-    const tb = el.querySelector('.toolbtn');
-    if(tb) tb.onclick = e => {
-      e.stopPropagation();
-      const box = el.querySelector('.tools'); const on = box.classList.toggle('open');
-      tb.textContent = `${on ? 'hide' : 'show'} ${el.querySelectorAll('.tl').length} tool calls`;
-    };
-  });
-}
 
 function renderCompare(){
   const same = slot === 0;
@@ -409,18 +351,13 @@ function renderNew(){
 }
 function renderNav(){
   if(mode === 'new'){ document.getElementById('nav').innerHTML = ''; return; }
-  const items = mode === 'thread'
-    ? CONDS.map(c => [LABEL[c] || c, c === cond])
-    : SLOTS.map(s => [s.label, s.i === slot]);
-  document.getElementById('nav').innerHTML = items.map(([label, sel], i) =>
-    `<button data-i="${i}" aria-selected="${sel}">${label}</button>`).join('');
+  document.getElementById('nav').innerHTML = SLOTS.map((s2, i) =>
+    `<button data-i="${i}" aria-selected="${s2.i === slot}">${s2.label}</button>`).join('');
   document.querySelectorAll('#nav button').forEach(b => b.onclick = () => {
-    if(mode === 'thread') cond = CONDS[+b.dataset.i]; else slot = SLOTS[+b.dataset.i].i;
-    draw();
+    slot = SLOTS[+b.dataset.i].i; draw();
   });
 }
 function draw(){
-  document.getElementById('mThread').setAttribute('aria-pressed', String(mode === 'thread'));
   document.getElementById('mCompare').setAttribute('aria-pressed', String(mode === 'compare'));
   const eb = document.getElementById('mElide');
   eb.setAttribute('aria-pressed', String(hideShared));
@@ -428,19 +365,17 @@ function draw(){
   renderNav();
   document.getElementById('mNew').setAttribute('aria-pressed', String(mode === 'new'));
   document.getElementById('mElide').style.display = mode === 'new' ? 'none' : '';
-  if(mode === 'new') renderNew(); else if(mode === 'thread') renderThread(); else renderCompare();
+  if(mode === 'new') renderNew(); else renderCompare();
 }
-document.getElementById('mThread').onclick = () => { mode = 'thread'; draw(); };
 document.getElementById('mCompare').onclick = () => { mode = 'compare'; draw(); };
 document.getElementById('mNew').onclick = () => { mode = 'new'; draw(); };
 document.getElementById('mElide').onclick = () => { hideShared = !hideShared; draw(); };
 document.addEventListener('keydown', e => {
   if(e.metaKey || e.ctrlKey || e.altKey) return;
   const n = parseInt(e.key, 10);
-  if(mode === 'thread' && n >= 1 && n <= CONDS.length){ cond = CONDS[n-1]; draw(); }
   if(mode === 'compare' && n >= 1 && n <= 5){ slot = SLOTS[n-1].i; draw(); }
   if(e.key === 's'){ hideShared = !hideShared; draw(); }
-  if(e.key === 'c'){ mode = mode === 'thread' ? 'compare' : 'thread'; draw(); }
+  if(e.key === 'c'){ mode = mode === 'new' ? 'compare' : 'new'; draw(); }
 });
 draw();
 </script>
